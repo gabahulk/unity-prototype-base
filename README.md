@@ -14,7 +14,7 @@ See also the list of [contributors](https://github.com/gabahulk/unity-prototype-
 
 ## Contributing
 
-See the [contribution guidelines](./CONTRIBUTING.md)!
+If you have any ideas/needs for your prototypes, leave an issue! For more information on how to contribuite see the [contribution guidelines](./CONTRIBUTING.md)!
 
 ## License
 

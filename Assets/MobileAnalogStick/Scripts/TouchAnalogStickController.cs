@@ -1,103 +1,124 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
-public class TouchAnalogStickController : MonoBehaviour
+using UnityEngine.UI;
+namespace TouchAnalogStick
 {
-
-    private float horizontal;
-    private float vertical;
-    private Vector2 initialTouchPosition;
-    private float analogStickBackgroundRadius;
-    private SpriteRenderer analogStickSpriteRenderer;
-
-    public GameObject analogStickControler;
-    public GameObject analogStick;
-    public SpriteRenderer analogStickBackgroundSpriteRenderer;
-    public bool mouseDebug;
-
-    public float Horizontal { get => horizontal; set => horizontal = value; }
-    public float Vertical { get => vertical; set => vertical = value; }
-
-
-    // Start is called before the first frame update
-    void Start()
+    public class TouchAnalogStickController : MonoBehaviour
     {
-        analogStickSpriteRenderer = analogStick.GetComponent<SpriteRenderer>();
-        analogStickBackgroundRadius = analogStickBackgroundSpriteRenderer.bounds.size.x / 2 - analogStickSpriteRenderer.bounds.size.x/2;
-        analogStickControler.SetActive(false);
-    }
 
-    // Update is called once per frame
-    void Update()
-    {
-        if (mouseDebug)
+        private float horizontal;
+        private float vertical;
+        private float analogStickBackgroundRadius;
+        private Image analogStickImage;
+        private RectTransform analogStickRectTransform;
+        private Vector2 uiOffset;
+        private RectTransform CanvasRect;
+        private RectTransform rectTransform;
+
+        public GameObject analogStickControler;
+        public Image analogStickBackgroundImage;
+        public GameObject analogStick;
+        public bool useMouseTouch;
+        public bool debugPrint;
+        public Canvas canvas;
+
+        public float Horizontal { get => horizontal; set => horizontal = value; }
+        public float Vertical { get => vertical; set => vertical = value; }
+
+
+        // Start is called before the first frame update
+        void Start()
         {
-            if (Input.GetMouseButtonDown(0))
-            {
-                Vector3 mousePosition = new Vector3(Input.mousePosition.x, Input.mousePosition.y, -Camera.main.transform.position.z);
-                Vector2 worldMousePos = Camera.main.ScreenToWorldPoint(mousePosition);
-                Vector3 inputPosition = new Vector3(worldMousePos.x, worldMousePos.y, this.transform.position.z);
-                ShowAnalogStickAtPosition(inputPosition);
-                initialTouchPosition = inputPosition;
-                
-            }
+            this.transform.localPosition = Vector2.zero;
+            CanvasRect = canvas.GetComponent<RectTransform>();
+            // Get the rect transform
+            this.rectTransform = analogStickBackgroundImage.rectTransform;
 
-            if (Input.GetMouseButton(0))
-            {
-                Vector3 mousePosition = new Vector3(Input.mousePosition.x, Input.mousePosition.y, -Camera.main.transform.position.z);
-                Vector2 worldMousePos = Camera.main.ScreenToWorldPoint(mousePosition);
-                Vector3 inputPosition = new Vector3(worldMousePos.x, worldMousePos.y, this.transform.position.z);
-                MoveStick(inputPosition);
-            }
-
-            if (Input.GetMouseButtonUp(0))
-            {
-                horizontal = 0;
-                vertical = 0;
-                HideAnalogStick();
-            }
+            // Calculate the screen offset
+            this.uiOffset = new Vector2((float)CanvasRect.sizeDelta.x / 2f, (float)CanvasRect.sizeDelta.y / 2f);
+            analogStickRectTransform = analogStick.GetComponent<RectTransform>();
+            analogStickImage = analogStick.GetComponent<Image>();
+            analogStickBackgroundRadius = analogStickBackgroundImage.sprite.rect.width / 2 - analogStickImage.sprite.rect.width / 2;
+            analogStickControler.SetActive(false);
         }
-        else
+
+        // Update is called once per frame
+        void Update()
         {
-            foreach (Touch touch in Input.touches)
+            if (useMouseTouch)
             {
-                if (touch.phase == TouchPhase.Began)
+                if (Input.GetMouseButtonDown(0))
                 {
-                    // Construct a ray from the current touch coordinates
-                    Ray ray = Camera.main.ScreenPointToRay(touch.position);
-                    if (Physics.Raycast(ray))
+                    ShowAnalogStickAtPosition(Input.mousePosition);
+                }
+
+                if (Input.GetMouseButton(0))
+                {
+                    MoveStick(Input.mousePosition);
+                }
+
+                if (Input.GetMouseButtonUp(0))
+                {
+                    horizontal = 0;
+                    vertical = 0;
+                    HideAnalogStick();
+                }
+            }
+            else
+            {
+                foreach (Touch touch in Input.touches)
+                {
+                    if (touch.phase == TouchPhase.Began)
                     {
-                        Debug.Log("eita");
+                        // Construct a ray from the current touch coordinates
+                        Ray ray = Camera.main.ScreenPointToRay(touch.position);
+                        if (Physics.Raycast(ray))
+                        {
+                            Debug.LogWarning("NYI :(");
+                        }
                     }
                 }
             }
         }
-        print(new Vector2(Horizontal,Vertical));
-    }
 
-    void ShowAnalogStickAtPosition(Vector3 position)
-    {
-        analogStickControler.transform.position = position;
-        analogStickControler.SetActive(true);
-    }
-
-    void MoveStick(Vector3 position)
-    {
-        Vector3 direction = position - (Vector3)initialTouchPosition;
-
-        if (Vector3.Distance(initialTouchPosition, position) > analogStickBackgroundRadius)
+        void ShowAnalogStickAtPosition(Vector3 position)
         {
-            position = (Vector3)initialTouchPosition + (direction.normalized * analogStickBackgroundRadius);
-        }
-        horizontal = Mathf.Clamp(direction.x / analogStickBackgroundRadius,-1,1);
-        vertical = Mathf.Clamp(direction.y / analogStickBackgroundRadius,-1,1);
-        position.z = this.transform.position.z;
-        analogStick.transform.position = position;
-    }
+            // Get the position on the canvas
+            Vector2 viewportPosition = Camera.main.ScreenToViewportPoint(position);
+            Vector2 proportionalPosition = new Vector2(viewportPosition.x * CanvasRect.sizeDelta.x, viewportPosition.y * CanvasRect.sizeDelta.y);
 
-    void HideAnalogStick()
-    {
-        analogStickControler.SetActive(false);
+            // Set the position and remove the screen offset
+            this.rectTransform.localPosition = proportionalPosition - uiOffset;
+            analogStickControler.SetActive(true);
+        }
+
+        void MoveStick(Vector3 position)
+        {
+            // Get the position on the canvas
+            Vector2 viewportPosition = Camera.main.ScreenToViewportPoint(position);
+            Vector2 proportionalPosition = new Vector2(viewportPosition.x * CanvasRect.sizeDelta.x, viewportPosition.y * CanvasRect.sizeDelta.y);
+            proportionalPosition = (proportionalPosition - uiOffset);
+            Vector2 direction = proportionalPosition - (Vector2)rectTransform.localPosition;
+            if (Vector2.Distance(rectTransform.localPosition, proportionalPosition) > analogStickBackgroundRadius)
+            {
+                proportionalPosition = (Vector2)rectTransform.localPosition + (direction.normalized * analogStickBackgroundRadius);
+            }
+            horizontal = Mathf.Clamp(direction.x / analogStickBackgroundRadius, -1, 1);
+            vertical = Mathf.Clamp(direction.y / analogStickBackgroundRadius, -1, 1);
+            analogStickRectTransform.localPosition = proportionalPosition;
+
+            if (debugPrint)
+            {
+                Debug.Log("Input vector: " + new Vector2(horizontal, vertical));
+            }
+        }
+
+
+
+        void HideAnalogStick()
+        {
+            analogStickControler.SetActive(false);
+        }
     }
 }
